@@ -1,3 +1,8 @@
 {
-    "name": "WebGain Installer"
+    "modules": [
+        {
+            "active": true,
+            "name": "nerd-font"
+        }
+    ]
 }

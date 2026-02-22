@@ -16,6 +16,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type onlineConfig struct {
+	GitHub    string `json:"github"`
+	Installer string `json:"installer"`
+}
+
 func PrepareRoot() (string, error) {
 	guid := uuid.New().String()
 	root := filepath.Join(os.TempDir(), "WebGainInstaller", guid)
@@ -28,11 +33,11 @@ func PrepareRoot() (string, error) {
 func VerifyModules(configFS fs.FS, webgainRoot string) error {
 	destPath := filepath.Join(webgainRoot, "setup.json")
 
-	onlineURL := readOnlineURL(configFS)
-	if onlineURL != "" {
-		logger.Info("URL online.txt originale letto, URL raw risultante: %s", onlineURL)
+	downloadURL := buildInstallerURL(configFS)
+	if downloadURL != "" {
+		logger.Info("URL installer composto: %s", downloadURL)
 		logger.Info("Tentativo download setup.json online...")
-		if data, err := downloadWithRetry(onlineURL, 3, 30*time.Second); err == nil {
+		if data, err := downloadWithRetry(downloadURL, 3, 30*time.Second); err == nil {
 			if isValidJSON(data) {
 				logger.Info("Download riuscito, JSON valido (%d bytes), salvataggio in %s", len(data), destPath)
 				return os.WriteFile(destPath, data, 0644)
@@ -42,7 +47,7 @@ func VerifyModules(configFS fs.FS, webgainRoot string) error {
 			logger.Warn("Download fallito: %v, passaggio a fallback embedded", err)
 		}
 	} else {
-		logger.Warn("URL online.txt vuoto o non leggibile, passaggio diretto a fallback embedded")
+		logger.Warn("Impossibile comporre URL installer, passaggio diretto a fallback embedded")
 	}
 
 	logger.Info("Lettura setup.json embedded...")
@@ -61,21 +66,47 @@ func VerifyModules(configFS fs.FS, webgainRoot string) error {
 	return fmt.Errorf("setup.json non valido")
 }
 
-func readOnlineURL(configFS fs.FS) string {
-	data, err := fs.ReadFile(configFS, "online.txt")
+func buildInstallerURL(configFS fs.FS) string {
+	data, err := fs.ReadFile(configFS, "online.json")
 	if err != nil {
-		logger.Warn("Impossibile leggere online.txt: %v", err)
+		logger.Warn("Impossibile leggere online.json: %v", err)
 		return ""
 	}
-	raw := strings.TrimSpace(string(data))
-	converted := toRawURL(raw)
-	if raw != converted {
-		logger.Info("URL convertito: %s -> %s", raw, converted)
+
+	var cfg onlineConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		logger.Warn("online.json non e' un JSON valido: %v", err)
+		return ""
 	}
-	return converted
+
+	if cfg.GitHub == "" || cfg.Installer == "" {
+		logger.Warn("online.json incompleto: github=%q, installer=%q", cfg.GitHub, cfg.Installer)
+		return ""
+	}
+
+	logger.Info("online.json letto: github=%s, installer=%s", cfg.GitHub, cfg.Installer)
+
+	baseURL := toRawBaseURL(cfg.GitHub)
+	finalURL := baseURL + "repo/config/" + cfg.Installer
+
+	logger.Info("Base URL raw: %s", baseURL)
+	logger.Info("URL finale composto: %s", finalURL)
+
+	return finalURL
 }
 
-func toRawURL(url string) string {
+func toRawBaseURL(githubURL string) string {
+	url := strings.TrimRight(githubURL, "/")
+	url = strings.Replace(url, "github.com/", "raw.githubusercontent.com/", 1)
+	url = strings.Replace(url, "/blob/", "/", 1)
+	if !strings.HasSuffix(url, "/main") && !strings.HasSuffix(url, "/master") {
+		url += "/main"
+	}
+	return url + "/"
+}
+
+// ToRawURL converte un URL GitHub generico nella versione raw.
+func ToRawURL(url string) string {
 	if !strings.Contains(url, "github.com/") {
 		return url
 	}

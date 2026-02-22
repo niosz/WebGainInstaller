@@ -1,1 +1,0 @@
-https://github.com/niosz/WebGainInstaller/repo/config/installer000.json

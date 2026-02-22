@@ -1,3 +1,8 @@
-{
-   ciao
+{dxs
+   "modules": [
+       {
+           "active": true,
+           "name": "nerd-font"
+       }
+   ]
 }
