@@ -249,7 +249,15 @@ func downloadWithRetry(url string, maxRetries int, timeout time.Duration) ([]byt
 
 	for i := 0; i < maxRetries; i++ {
 		logger.Info("Download tentativo %d/%d: %s", i+1, maxRetries, url)
-		resp, err := client.Get(url)
+		req, reqErr := http.NewRequest("GET", url, nil)
+		if reqErr != nil {
+			lastErr = reqErr
+			logger.Warn("Tentativo %d/%d fallito (creazione request): %v", i+1, maxRetries, reqErr)
+			continue
+		}
+		req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		req.Header.Set("Pragma", "no-cache")
+		resp, err := client.Do(req)
 		if err != nil {
 			lastErr = err
 			logger.Warn("Tentativo %d/%d fallito (connessione): %v", i+1, maxRetries, err)
