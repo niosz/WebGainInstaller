@@ -48,7 +48,24 @@ func readOnlineURL(configFS fs.FS) string {
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(string(data))
+	return toRawURL(strings.TrimSpace(string(data)))
+}
+
+func toRawURL(url string) string {
+	if !strings.Contains(url, "github.com/") {
+		return url
+	}
+	url = strings.Replace(url, "github.com/", "raw.githubusercontent.com/", 1)
+	url = strings.Replace(url, "/blob/", "/", 1)
+
+	const repoPrefix = "raw.githubusercontent.com/niosz/WebGainInstaller/"
+	if idx := strings.Index(url, repoPrefix); idx >= 0 {
+		afterRepo := url[idx+len(repoPrefix):]
+		if !strings.HasPrefix(afterRepo, "main/") && !strings.HasPrefix(afterRepo, "master/") {
+			url = url[:idx+len(repoPrefix)] + "main/" + afterRepo
+		}
+	}
+	return url
 }
 
 func downloadWithRetry(url string, maxRetries int, timeout time.Duration) ([]byte, error) {

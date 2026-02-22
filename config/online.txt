@@ -1,1 +1,1 @@
-https://www.trallalero.it/pippo.json
+https://github.com/niosz/WebGainInstaller/config/setup.json
