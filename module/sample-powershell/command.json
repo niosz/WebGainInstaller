@@ -1,0 +1,15 @@
+{
+  "name": "Script PowerShell di sistema",
+  "description": "Esegue script di configurazione PowerShell",
+  "weight": 30,
+  "steps": [
+    {
+      "type": "powershell_script",
+      "file": "setup.ps1"
+    },
+    {
+      "type": "verify",
+      "command": "powershell.exe -NoProfile -Command \"Write-Host 'Verifica OK'\""
+    }
+  ]
+}

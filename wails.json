@@ -1,0 +1,23 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "WebGainInstaller",
+  "outputfilename": "WebGainInstaller",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "WebGain",
+    "email": ""
+  },
+  "info": {
+    "companyName": "WebGain",
+    "productName": "WebGain Installer",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright 2026 WebGain",
+    "comments": "Automated environment installer"
+  },
+  "windows": {
+    "webview2": "embed"
+  }
+}

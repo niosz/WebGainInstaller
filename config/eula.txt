@@ -1,0 +1,28 @@
+CONTRATTO DI LICENZA CON L'UTENTE FINALE (EULA)
+
+IMPORTANTE - LEGGERE ATTENTAMENTE PRIMA DI PROCEDERE
+
+Il presente Contratto di Licenza con l'Utente Finale ("EULA") è un accordo legale tra l'utente (persona fisica o giuridica) e WebGain per l'utilizzo del software WebGain Installer e dei componenti da esso installati.
+
+1. CONCESSIONE DELLA LICENZA
+Il presente software viene concesso in licenza, non venduto. WebGain concede all'utente una licenza limitata, non esclusiva e non trasferibile per utilizzare il software ai fini dell'installazione e configurazione dell'ambiente di lavoro.
+
+2. RESTRIZIONI
+L'utente non può: (a) copiare, modificare o distribuire il software; (b) decompilare, disassemblare o tentare di derivare il codice sorgente; (c) rimuovere avvisi di copyright o etichette proprietarie; (d) utilizzare il software per scopi illeciti.
+
+3. COMPONENTI DI TERZE PARTI
+Il software può installare componenti di terze parti soggetti alle rispettive licenze. L'utente è tenuto a rispettare i termini di licenza di ciascun componente installato.
+
+4. ESCLUSIONE DI GARANZIA
+Il software viene fornito "COSÌ COM'È" senza garanzie di alcun tipo, esplicite o implicite, incluse, a titolo esemplificativo, garanzie di commerciabilità o idoneità per uno scopo particolare.
+
+5. LIMITAZIONE DI RESPONSABILITÀ
+In nessun caso WebGain sarà responsabile per danni diretti, indiretti, incidentali, speciali o consequenziali derivanti dall'uso o dall'impossibilità di utilizzare il software.
+
+6. MODIFICHE AL SISTEMA
+L'utente riconosce che il software apporterà modifiche alla configurazione del sistema operativo, incluse ma non limitate a: installazione di programmi, modifica di variabili d'ambiente, configurazione del registro di sistema e installazione di moduli e font.
+
+7. RISOLUZIONE
+La licenza è efficace fino alla sua risoluzione. Si risolve automaticamente qualora l'utente non rispetti i termini del presente contratto.
+
+Procedendo con l'installazione, l'utente dichiara di aver letto, compreso e accettato i termini del presente EULA.
