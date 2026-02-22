@@ -122,12 +122,26 @@ func (a *App) RunSetupSteps() {
 	time.Sleep(1 * time.Second)
 
 	logger.Info("Avvio verifica moduli...")
-	if err := setup.VerifyModules(a.configFS, a.webgainRoot); err != nil {
+	webgainOnline, err := setup.VerifyModules(a.configFS, a.webgainRoot)
+	if err != nil {
 		logger.Error("Verifica moduli fallita: %v", err)
 		a.fatalCorruptError()
 		return
 	}
-	logger.Info("Verifica moduli completata con successo")
+	logger.Info("Verifica moduli completata (online=%v)", webgainOnline)
+
+	wailsRuntime.EventsEmit(a.ctx, "setup:step", "Inizializzazione moduli...")
+	time.Sleep(1 * time.Second)
+
+	logger.Info("Avvio inizializzazione moduli...")
+	modules, err := setup.InitModules(a.configFS, a.webgainRoot, webgainOnline)
+	if err != nil {
+		logger.Error("Inizializzazione moduli fallita: %v", err)
+		a.fatalCorruptError()
+		return
+	}
+	logger.Info("Inizializzazione moduli completata: %d moduli pronti", len(modules))
+	_ = modules
 
 	wailsRuntime.EventsEmit(a.ctx, "setup:done", nil)
 	logger.Info("Setup completato")

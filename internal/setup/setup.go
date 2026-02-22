@@ -21,6 +21,19 @@ type onlineConfig struct {
 	Installer string `json:"installer"`
 }
 
+type moduleEntry struct {
+	Name   string `json:"name"`
+	Active *bool  `json:"active,omitempty"`
+}
+
+type setupConfig struct {
+	Modules []moduleEntry `json:"modules"`
+}
+
+type Module struct {
+	Name string
+}
+
 func PrepareRoot() (string, error) {
 	guid := uuid.New().String()
 	root := filepath.Join(os.TempDir(), "WebGainInstaller", guid)
@@ -30,7 +43,9 @@ func PrepareRoot() (string, error) {
 	return root, nil
 }
 
-func VerifyModules(configFS fs.FS, webgainRoot string) error {
+// VerifyModules scarica o usa l'embedded setup.json.
+// Restituisce true se il file proviene da download online.
+func VerifyModules(configFS fs.FS, webgainRoot string) (bool, error) {
 	destPath := filepath.Join(webgainRoot, "setup.json")
 
 	downloadURL := buildInstallerURL(configFS)
@@ -40,7 +55,7 @@ func VerifyModules(configFS fs.FS, webgainRoot string) error {
 		if data, err := downloadWithRetry(downloadURL, 3, 30*time.Second); err == nil {
 			if isValidJSON(data) {
 				logger.Info("Download riuscito, JSON valido (%d bytes), salvataggio in %s", len(data), destPath)
-				return os.WriteFile(destPath, data, 0644)
+				return true, os.WriteFile(destPath, data, 0644)
 			}
 			logger.Warn("Download riuscito ma JSON non valido (%d bytes), passaggio a fallback embedded", len(data))
 		} else {
@@ -54,16 +69,121 @@ func VerifyModules(configFS fs.FS, webgainRoot string) error {
 	embeddedData, err := fs.ReadFile(configFS, "setup.json")
 	if err != nil {
 		logger.Error("Lettura setup.json embedded fallita: %v", err)
-		return fmt.Errorf("setup.json non valido")
+		return false, fmt.Errorf("setup.json non valido")
 	}
 
 	if isValidJSON(embeddedData) {
 		logger.Info("Setup.json embedded valido (%d bytes), salvataggio in %s", len(embeddedData), destPath)
-		return os.WriteFile(destPath, embeddedData, 0644)
+		return false, os.WriteFile(destPath, embeddedData, 0644)
 	}
 
 	logger.Error("Setup.json embedded non e' un JSON valido (%d bytes)", len(embeddedData))
-	return fmt.Errorf("setup.json non valido")
+	return false, fmt.Errorf("setup.json non valido")
+}
+
+// InitModules valida il setup.json in WEBGAINROOT.
+// Se webgainOnline è true e la validazione fallisce, ritenta con l'embedded.
+func InitModules(configFS fs.FS, webgainRoot string, webgainOnline bool) ([]Module, error) {
+	destPath := filepath.Join(webgainRoot, "setup.json")
+	logger.Info("Inizializzazione moduli da %s (online=%v)", destPath, webgainOnline)
+
+	modules, err := parseAndValidateSetup(destPath)
+	if err == nil {
+		logger.Info("Validazione setup.json riuscita: %d moduli attivi", len(modules))
+		return modules, nil
+	}
+	logger.Warn("Validazione setup.json fallita: %v", err)
+
+	if !webgainOnline {
+		logger.Error("File proveniente da embedded, nessun fallback disponibile")
+		return nil, err
+	}
+
+	logger.Info("File proveniente da online, tentativo fallback con embedded...")
+	embeddedData, readErr := fs.ReadFile(configFS, "setup.json")
+	if readErr != nil {
+		logger.Error("Lettura setup.json embedded fallita: %v", readErr)
+		return nil, fmt.Errorf("setup.json embedded non disponibile")
+	}
+
+	if !isValidJSON(embeddedData) {
+		logger.Error("Setup.json embedded non e' un JSON valido")
+		return nil, fmt.Errorf("setup.json embedded non valido")
+	}
+
+	logger.Info("Setup.json embedded JSON valido, sostituzione in WEBGAINROOT...")
+	if writeErr := os.WriteFile(destPath, embeddedData, 0644); writeErr != nil {
+		logger.Error("Scrittura fallback embedded fallita: %v", writeErr)
+		return nil, fmt.Errorf("impossibile scrivere fallback: %w", writeErr)
+	}
+
+	modules, err = parseAndValidateSetup(destPath)
+	if err != nil {
+		logger.Error("Validazione fallback embedded fallita: %v", err)
+		return nil, err
+	}
+
+	logger.Info("Fallback embedded valido: %d moduli attivi", len(modules))
+	return modules, nil
+}
+
+func parseAndValidateSetup(path string) ([]Module, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("impossibile leggere %s: %w", path, err)
+	}
+
+	logger.Info("Parsing setup.json (%d bytes)...", len(data))
+
+	var cfg setupConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("JSON non valido: %w", err)
+	}
+
+	if cfg.Modules == nil {
+		logger.Error("Proprieta 'modules' mancante")
+		return nil, fmt.Errorf("proprieta 'modules' mancante")
+	}
+
+	if len(cfg.Modules) == 0 {
+		logger.Error("Array 'modules' vuoto")
+		return nil, fmt.Errorf("array 'modules' vuoto")
+	}
+
+	logger.Info("Trovati %d elementi nell'array modules", len(cfg.Modules))
+
+	var active []Module
+	seen := make(map[string]bool)
+
+	for i, entry := range cfg.Modules {
+		name := strings.TrimSpace(entry.Name)
+		if name == "" {
+			logger.Error("Modulo [%d]: proprieta 'name' mancante o blank", i)
+			return nil, fmt.Errorf("modulo [%d]: 'name' mancante o blank", i)
+		}
+
+		if entry.Active != nil && !*entry.Active {
+			logger.Info("Modulo [%d] '%s': disattivato, scartato", i, name)
+			continue
+		}
+
+		if seen[name] {
+			logger.Error("Modulo [%d] '%s': nome duplicato", i, name)
+			return nil, fmt.Errorf("modulo '%s' duplicato", name)
+		}
+		seen[name] = true
+
+		active = append(active, Module{Name: name})
+		logger.Info("Modulo [%d] '%s': attivo", i, name)
+	}
+
+	if len(active) == 0 {
+		logger.Error("Nessun modulo attivo dopo il filtraggio")
+		return nil, fmt.Errorf("nessun modulo attivo")
+	}
+
+	logger.Info("Moduli validi: %d su %d totali", len(active), len(cfg.Modules))
+	return active, nil
 }
 
 func buildInstallerURL(configFS fs.FS) string {

@@ -3,6 +3,18 @@
         {
             "active": true,
             "name": "nerd-font"
+        },
+        {
+            "active": false,
+            "name": "nerd-font"
+        },
+        {
+            "active": true,
+            "name": "nerd-font2"
+        },
+        {
+            "active": true,
+            "name": "nerd-font2"
         }
     ]
 }
