@@ -1,9 +1,0 @@
-{
-  "name": "WebGain Environment Setup",
-  "version": "1.0.0",
-  "order": [
-    "sample-config",
-    "sample-powershell",
-    "sample-env"
-  ]
-}

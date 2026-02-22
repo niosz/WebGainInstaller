@@ -1,8 +1,8 @@
-{dxs
-   "modules": [
-       {
-           "active": true,
-           "name": "nerd-font"
-       }
-   ]
+{
+    "modules": [
+        {
+            "active": true,
+            "name": "nerd-font"
+        }
+    ]
 }
