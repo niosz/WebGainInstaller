@@ -3,14 +3,19 @@ package main
 import (
 	"context"
 	"io/fs"
+	"log"
+	"os/exec"
 	"syscall"
 	"time"
 	"unsafe"
 
+	"WebGainInstaller/internal/logger"
 	"WebGainInstaller/internal/setup"
 
 	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+var devMode = "false"
 
 var (
 	user32Dll       = syscall.NewLazyDLL("user32.dll")
@@ -91,20 +96,41 @@ func (a *App) RunSetupSteps() {
 
 	root, err := setup.PrepareRoot()
 	if err != nil {
+		logger.Error("Creazione WEBGAINROOT fallita: %v", err)
 		a.fatalCorruptError()
 		return
 	}
 	a.webgainRoot = root
 
+	if err := logger.Init(root); err != nil {
+		log.Printf("Impossibile inizializzare log: %v", err)
+	}
+	logger.Info("WEBGAINROOT creata: %s", root)
+	logger.Info("Modalita: %s", func() string {
+		if devMode == "true" {
+			return "sviluppo"
+		}
+		return "produzione"
+	}())
+
+	if devMode == "true" {
+		logger.Info("Apertura Explorer su WEBGAINROOT (dev mode)")
+		exec.Command("explorer", root).Start()
+	}
+
 	wailsRuntime.EventsEmit(a.ctx, "setup:step", "Verifica moduli...")
 	time.Sleep(1 * time.Second)
 
+	logger.Info("Avvio verifica moduli...")
 	if err := setup.VerifyModules(a.configFS, a.webgainRoot); err != nil {
+		logger.Error("Verifica moduli fallita: %v", err)
 		a.fatalCorruptError()
 		return
 	}
+	logger.Info("Verifica moduli completata con successo")
 
 	wailsRuntime.EventsEmit(a.ctx, "setup:done", nil)
+	logger.Info("Setup completato")
 }
 
 func (a *App) GetEulaText() string {
@@ -116,6 +142,7 @@ func (a *App) GetEulaText() string {
 }
 
 func (a *App) fatalCorruptError() {
+	logger.Error("Errore fatale: installazione corrotta")
 	a.skipCloseConfirm = true
 	wailsRuntime.EventsEmit(a.ctx, "setup:fatal", nil)
 	time.Sleep(200 * time.Millisecond)
@@ -127,5 +154,7 @@ func (a *App) fatalCorruptError() {
 		uintptr(unsafe.Pointer(title)),
 		uintptr(mbOK|mbIconError),
 	)
+	logger.Error("Applicazione terminata per errore fatale")
+	logger.Close()
 	wailsRuntime.Quit(a.ctx)
 }

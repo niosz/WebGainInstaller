@@ -120,7 +120,7 @@ echo.
 
 if "!DEV_MODE!"=="1" (
     echo [5/6] Compilazione sviluppo...
-    call wails build -platform windows/amd64 -ldflags "-s -w" -trimpath -clean
+    call wails build -platform windows/amd64 -ldflags "-s -w -X main.devMode=true" -trimpath -clean
 ) else (
     echo [5/6] Compilazione produzione con offuscamento e compressione...
     call wails build -platform windows/amd64 -ldflags "-s -w" -trimpath -clean -obfuscated -upx -upxflags "--best"
